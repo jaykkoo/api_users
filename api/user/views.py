@@ -1,22 +1,37 @@
-from django.shortcuts import render
+
 
 # Create your views here.
 
-from rest_framework import generics
+
 from django.contrib.auth.models import User
-from rest_framework import viewsets, permissions
+from rest_framework import generics
 from .serializers import UserSerializer
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import NotFound
 
-
-class UserViewSetList(viewsets.ReadOnlyModelViewSet):
+class UserList(generics.ListCreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+
+
+class UserDetail(generics.RetrieveUpdateDestroyAPIView):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        obj = None
+        try:
+            obj = queryset.get(pk=self.kwargs.get('pk'))
+        except User.DoesNotExist:
+            raise NotFound('Object not found')
+        return obj
+    
+    
 
 class LoginView(APIView):
     def post(self, request, *args, **kwargs):
@@ -35,11 +50,5 @@ class LoginView(APIView):
             return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-class UserDetailView(generics.RetrieveAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
 
-    def get_object(self):
-        # override the get_object method to filter by pk
-        return generics.get_object_or_404(self.get_queryset(), pk=self.kwargs['pk'])
     
